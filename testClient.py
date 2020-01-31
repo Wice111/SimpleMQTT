@@ -25,29 +25,34 @@ def startConnection(ipServ, strOut):
         clientSocket.settimeout(10)
         clientSocket.connect(addr)
         clientSocket.settimeout(None)
-        print("server connected: " + str(addr[0])+':' + str(addr[1]))
+        print("<System>: Server connected: " + str(addr[0])+':' + str(addr[1]))
         brokerList.append(ipServ)
         threadGroup[ipServ] = ClientThread(clientSocket)
         threadGroup[ipServ].start()
         threadGroup[ipServ].send(strOut)
     except Exception as e:
-        print("something's wrong with "+str(addr)+". Exception is "+str(e))
+        print("<System>: Something's wrong with "+str(addr)+". Exception is "+str(e))
 
 
 brokerList = list()
 threadGroup = dict()
 while True:
     temp = input().split(' ')
-    ipServ = temp[1]
-    strOut = temp[0]+' '+temp[2]
-    if temp[0] == "sub" or temp[0] == "subscribe":
-        if ipServ not in brokerList:
-            startConnection(ipServ, strOut)
+    try:
+        ipServ = temp[1]
+        strOut = temp[0]+' '+" ".join(temp[2:])
+        if temp[0].lower() == "sub" or temp[0].lower() == "subscribe":
+            if ipServ not in brokerList:
+                startConnection(ipServ, strOut)
+            else:
+                threadGroup[ipServ].send(strOut)
+        elif temp[0].lower() == "pub" or temp[0].lower() == "publish":
+            if ipServ not in brokerList:
+                print("There is no Broker at", str(ipServ))
+            else:
+                threadGroup[ipServ].send(strOut)
         else:
-            threadGroup[ipServ].send(strOut)
-    elif temp[0] == "pub" or temp[0] == "publish":
-        if ipServ not in brokerList:
-            print("there is no Broker at", str(ipServ))
-        else:
-            threadGroup[ipServ].send(strOut)
-    print("<you>:", strOut)
+            raise Exception('Wrong input')
+        print("<You>:", strOut)
+    except Exception as e:
+        print("<System>:",e)
