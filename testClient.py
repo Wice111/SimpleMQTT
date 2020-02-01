@@ -48,7 +48,7 @@ while True:
                 threadGroup[ipServ].send(strOut)
         elif temp[0].lower() == "pub" or temp[0].lower() == "publish":
             if ipServ not in brokerList:
-                print("There is no Broker at", str(ipServ))
+                startConnection(ipServ, strOut)
             else:
                 threadGroup[ipServ].send(strOut)
         else:
