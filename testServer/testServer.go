@@ -55,18 +55,34 @@ func clientHandler(conn net.Conn) {
 		strIn, _ := bufio.NewReader(conn).ReadString('\n')
 		temp := strings.Split(strIn, " ")
 		if strings.ToLower(temp[0]) == "sub" || strings.ToLower(temp[0]) == "subscribe" {
-			fmt.Print("<System>: ", conn.RemoteAddr().String(), " has subscribe to ", temp[1])
-			db.updateClientMap(conn.RemoteAddr().String(), strings.TrimSpace(temp[1]))
-			db.publishRetainValue(conn.RemoteAddr().String(), strings.TrimSpace(temp[1]))
+			if db.addClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
+				db.publishRetainValue(conn.RemoteAddr().String(), strings.TrimSpace(temp[1]))
+				fmt.Print("<System>: ", conn.RemoteAddr().String(), " has subscribed to ", temp[1])
+				fmt.Fprintf(conn, "Subscribe confirmed")
+			} else {
+				fmt.Print("<System>: ", conn.RemoteAddr().String(), " has already been subscribed to ", temp[1])
+				fmt.Fprintf(conn, "You has already been subscribeb to "+strings.TrimSpace(temp[1]))
+			}
+
 		} else if strings.ToLower(temp[0]) == "pub" || strings.ToLower(temp[0]) == "publish" {
-			fmt.Print("<System>: ", conn.RemoteAddr().String(), " has publish topic ", temp[1], " ", temp[2])
-			db.updateRetainMap(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
+			fmt.Print("<System>: ", conn.RemoteAddr().String(), " has published topic ", temp[1], " ", temp[2])
+			db.updateRetain(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
 			db.publish(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
+			fmt.Fprintf(conn, "Publishedconfirmed")
+		} else if strings.ToLower(temp[0]) == "unsub" || strings.ToLower(temp[0]) == "unsubsribe" {
+			if db.deleteClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
+				fmt.Print("<System>: ", conn.RemoteAddr().String(), " has unsubsribed topic ", temp[1])
+				fmt.Fprintf(conn, "Unsubsribe confirmed")
+			} else {
+				fmt.Print("<System>: ", conn.RemoteAddr().String(), " cant unsubsribe topic ", temp[1])
+				fmt.Fprintf(conn, "Cant unsubsribe")
+			}
+
 		}
 	}
 }
 
-func (db *safeDB) updateRetainMap(topic string, value string) {
+func (db *safeDB) updateRetain(topic string, value string) {
 	db.m.Lock()
 	defer db.m.Unlock()
 	db.retainMap[topic] = value
@@ -80,10 +96,26 @@ func (db *safeDB) publish(topic string, value string) {
 	}
 }
 
-func (db *safeDB) updateClientMap(clientIP string, topic string) {
+func (db *safeDB) addClient(clientIP string, topic string) bool {
 	db.m.Lock()
 	defer db.m.Unlock()
+	if _, found := find(db.clientMap[topic], clientIP); found {
+		return false
+	}
 	db.clientMap[topic] = append(db.clientMap[topic], clientIP)
+	return true
+
+}
+
+func (db *safeDB) deleteClient(clientIP string, topic string) bool {
+	db.m.Lock()
+	defer db.m.Unlock()
+	if _, has := db.clientMap[topic]; has {
+		if deleteSliceElm(db.clientMap[topic], clientIP) {
+			return true
+		}
+	}
+	return false
 
 }
 
@@ -94,4 +126,23 @@ func (db *safeDB) publishRetainValue(clientIP string, topic string) {
 		fmt.Fprintf(connlist[clientIP], topic+" "+val)
 	}
 
+}
+
+func deleteSliceElm(slice []string, item string) bool {
+	if i, found := find(slice, item); found {
+		slice[i] = slice[len(slice)-1]
+		slice[len(slice)-1] = ""
+		slice = slice[:len(slice)-1]
+		return true
+	}
+	return false
+}
+
+func find(slice []string, item string) (int, bool) {
+	for i, it := range slice {
+		if it == item {
+			return i, true
+		}
+	}
+	return -1, false
 }

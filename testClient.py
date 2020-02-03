@@ -7,6 +7,7 @@ class ClientThread(threading.Thread):
     def __init__(self, clientSocket):
         self.clientSocket = clientSocket
         threading.Thread.__init__(self)
+        self._stop_event = threading.Event()
 
     def run(self):
         while True:
@@ -15,6 +16,8 @@ class ClientThread(threading.Thread):
 
     def send(self, strOut):
         self.clientSocket.send((strOut+'\n').encode('utf-8'))
+    def stop(self):
+        self._stop_event.set()
 
 
 def startConnection(ipServ, strOut):
@@ -49,6 +52,11 @@ while True:
         elif temp[0].lower() == "pub" or temp[0].lower() == "publish":
             if ipServ not in brokerList:
                 startConnection(ipServ, strOut)
+            else:
+                threadGroup[ipServ].send(strOut)
+        elif temp[0].lower() == "unsub" or temp[0].lower() == "unsubsribe":
+            if ipServ not in brokerList:
+                raise Exception('You need to subscribe before unsubsribe')
             else:
                 threadGroup[ipServ].send(strOut)
         else:
