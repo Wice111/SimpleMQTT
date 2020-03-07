@@ -25,14 +25,16 @@ func main() {
 	db.retainMap = make(map[string]string)
 	db.clientMap = make(map[string][]string)
 	go clientReciver()
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		scanner.Scan()
-		strOut := scanner.Text()
-		for _, conn := range connlist {
-			fmt.Fprintf(conn, strOut)
-		}
+	for true {
 	}
+	// scanner := bufio.NewScanner(os.Stdin)
+	// for {
+	// 	scanner.Scan()
+	// 	strOut := scanner.Text()
+	// 	for _, conn := range connlist {
+	// 		fmt.Fprintf(conn, strOut)
+	// 	}
+	// }
 }
 
 func clientReciver() {

@@ -8,7 +8,7 @@ class ClientThread(threading.Thread):
         self.clientSocket = clientSocket
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
-
+        self.setDaemon(True)
     def run(self):
         while True:
             try:
