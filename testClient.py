@@ -93,9 +93,9 @@ while True:
             else: raise Exception('Wrong syntax')
 
         else:
-            raise Exception('Wrong syntax')
-
-    except (KeyboardInterrupt, SystemExit):
+            raise Exception('Wrong input')
+        print("<You>:", strOut)
+    except (KeyboardInterrupt):
         print("<System>: Shutting down")
         sys.exit()
     except Exception as e:
