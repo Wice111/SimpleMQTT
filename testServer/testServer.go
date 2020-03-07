@@ -25,16 +25,15 @@ func main() {
 	db.retainMap = make(map[string]string)
 	db.clientMap = make(map[string][]string)
 	go clientReciver()
-	for true {
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		scanner.Scan()
+		strOut := scanner.Text()
+		for _, conn := range connlist {
+			fmt.Fprintf(conn, strOut)
+		}
 	}
-	// scanner := bufio.NewScanner(os.Stdin)
-	// for {
-	// 	scanner.Scan()
-	// 	strOut := scanner.Text()
-	// 	for _, conn := range connlist {
-	// 		fmt.Fprintf(conn, strOut)
-	// 	}
-	// }
 }
 
 func clientReciver() {
@@ -70,7 +69,7 @@ func clientHandler(conn net.Conn) {
 			fmt.Print("<System>: ", conn.RemoteAddr().String(), " has published topic ", temp[1], " ", temp[2])
 			db.updateRetain(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
 			db.publish(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
-			fmt.Fprintf(conn, "Publishedconfirmed")
+			fmt.Fprintf(conn, "Published confirmed")
 		} else if strings.ToLower(temp[0]) == "unsub" || strings.ToLower(temp[0]) == "unsubsribe" {
 			if db.deleteClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
 				fmt.Print("<System>: ", conn.RemoteAddr().String(), " has unsubsribed topic ", temp[1])

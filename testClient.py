@@ -56,8 +56,11 @@ threadGroup = dict()
 while True:
     try:
         temp = input().split(' ')
+        for i,val in enumerate(temp):
+            temp[i]=val.strip("'")
         tempaddr = temp[1].split(':') # {servip,servport}
         addserv = (tempaddr[0],int(tempaddr[1]))
+        
         strOut = temp[0]+' '+" ".join(temp[2:])
         if temp[0].lower() == "sub" or temp[0].lower() == "subscribe":
             if addserv[0] not in brokerList:
