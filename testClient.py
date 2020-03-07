@@ -13,6 +13,9 @@ class ClientThread(threading.Thread):
         while True:
             try:
                 strIn = self.clientSocket.recv(2048)
+                if not strIn :
+                    print("<System>:",self.clientSocket.getpeername(),"doesnt send anyd data")
+                    break
                 print("<server>:", strIn.decode('utf-8'))
             except Exception as e:
                 print("<System>:",self.clientSocket.getpeername(),e)
