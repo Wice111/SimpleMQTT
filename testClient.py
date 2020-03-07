@@ -54,8 +54,8 @@ def stopConnection(ipServ):
 brokerList = list()
 threadGroup = dict()
 while True:
-    temp = input().split(' ')
     try:
+        temp = input().split(' ')
         tempaddr = temp[1].split(':') # {servip,servport}
         addserv = (tempaddr[0],int(tempaddr[1]))
         strOut = temp[0]+' '+" ".join(temp[2:])
@@ -77,5 +77,8 @@ while True:
         else:
             raise Exception('Wrong input')
         print("<You>:", strOut)
+    except (KeyboardInterrupt, SystemExit):
+        print("<System>: Shutting down")
+        sys.exit()
     except Exception as e:
         print("<System>:",e)
