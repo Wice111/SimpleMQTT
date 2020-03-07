@@ -56,6 +56,9 @@ func clientReciver(servport string) {
 func clientHandler(conn net.Conn) {
 	for {
 		strIn, _ := bufio.NewReader(conn).ReadString('\n')
+		if strIn == "" {
+			break
+		}
 		temp := strings.Split(strIn, " ")
 		if strings.ToLower(temp[0]) == "sub" || strings.ToLower(temp[0]) == "subscribe" {
 			if db.addClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
@@ -82,6 +85,8 @@ func clientHandler(conn net.Conn) {
 			}
 		}
 	}
+	db.deleteAllClient(conn.RemoteAddr().String())
+	fmt.Print("<System>: ", conn.RemoteAddr().String(), " has disconnected\n")
 }
 
 func (db *safeDB) updateRetain(topic string, value string) {
@@ -94,7 +99,9 @@ func (db *safeDB) publish(topic string, value string) {
 	db.m.Lock()
 	defer db.m.Unlock()
 	for _, clientIP := range db.clientMap[topic] {
-		fmt.Fprintf(connlist[clientIP], topic+" "+value)
+		if _,has := connlist[clientIP]; has{
+			fmt.Fprintf(connlist[clientIP], topic+" "+value)
+		}
 	}
 }
 
@@ -118,7 +125,6 @@ func (db *safeDB) deleteClient(clientIP string, topic string) bool {
 		}
 	}
 	return false
-
 }
 
 func (db *safeDB) publishRetainValue(clientIP string, topic string) {
@@ -147,4 +153,12 @@ func find(slice []string, item string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+func (db *safeDB) deleteAllClient(cilentIP string) {
+	delete(connlist,cilentIP)
+	for key := range db.clientMap {
+		db.deleteClient(cilentIP, key)
+	}
+
 }
