@@ -1,6 +1,7 @@
 import socket
 import sys
 import threading
+import shlex
 
 
 class ClientThread(threading.Thread):
@@ -53,10 +54,10 @@ def stopConnection(ipServ):
 
 brokerList = list()
 threadGroup = dict()
-allCommand = ["sub","subsribe","pub","publish","unsub","unsubsribe",'exit','quit']
+allCommand = ["sub","subscribe","pub","publish","unsub","unsubscribe",'exit','quit']
 while True:
     try:
-        temp = [v.strip() for  v in input().replace("'",' ').strip().split()] 
+        temp = [v.strip() for  v in shlex.split(input())] 
         temp[0] = temp[0].lower()
         if temp[0] not in allCommand: raise Exception("Command not found")
         if temp[0] in ['exit','quit']: raise KeyboardInterrupt
@@ -70,17 +71,17 @@ while True:
         if len(temp) < 3 : raise Exception("No topic")
 
         if len(temp) == 3:
-            if temp[0] == "sub" or temp[0] == "subsribe":
+            if temp[0] == "sub" or temp[0] == "subscribe":
                 if addserv[0] not in brokerList:
                     startConnection(addserv, strOut)
                 else:
                     threadGroup[addserv[0]].send(strOut)
-            elif temp[0] == "unsub" or temp[0] == "unsubsribe":
+            elif temp[0] == "unsub" or temp[0] == "unsubscribe":
                 if addserv[0] not in brokerList:
-                    raise Exception('You need to subscribe before unsubsribe')
+                    raise Exception('You need to subscribe before unsubscribe')
                 else:
                     threadGroup[addserv[0]].send(strOut)
-            print("<You>:", strOut)
+            else: raise Exception('Wrong syntax')
 
         elif len(temp) == 4:
           
@@ -89,7 +90,7 @@ while True:
                     startConnection(addserv, strOut)
                 else:
                     threadGroup[addserv[0]].send(strOut)
-            print("<You>:", strOut)
+            else: raise Exception('Wrong syntax')
 
         else:
             raise Exception('Wrong syntax')
