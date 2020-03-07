@@ -53,33 +53,46 @@ def stopConnection(ipServ):
 
 brokerList = list()
 threadGroup = dict()
+allCommand = ["sub","subsribe","pub","publish","unsub","unsubsribe"]
 while True:
     try:
-        temp = input().split(' ')
-        for i,val in enumerate(temp):
-            temp[i]=val.strip("'")
-        tempaddr = temp[1].split(':') # {servip,servport}
-        addserv = (tempaddr[0],int(tempaddr[1]))
+        temp = [v.strip() for  v in input().replace("'",' ').strip().split()] 
+        if len(temp) == 0:
+            pass
+
+        elif len(temp) == 4:
+            temp[0] = temp[0].lower()
+            if temp[0] not in allCommand: raise Exception("Command not found")
+            
+            tempaddr = [ v.strip() for v in temp[1].split(':') ]
+            if len(tempaddr) != 2 and not tempaddr[1].isnumeric():  raise Exception('Wrong ip or port')
+         
+            addserv = (tempaddr[0],int(tempaddr[1]))  # {servip,servport}
         
-        strOut = temp[0]+' '+" ".join(temp[2:])
-        if temp[0].lower() == "sub" or temp[0].lower() == "subscribe":
-            if addserv[0] not in brokerList:
-                startConnection(addserv, strOut)
+            strOut = temp[0]+" "+" ".join(temp[2:])
+            if temp[0] == "sub" or temp[0] == "subsribe":
+                if addserv[0] not in brokerList:
+                    startConnection(addserv, strOut)
+                else:
+                    threadGroup[addserv[0]].send(strOut)
+            elif temp[0] == "pub" or temp[0] == "publish":
+                if addserv[0] not in brokerList:
+                    startConnection(addserv, strOut)
+                else:
+                    threadGroup[addserv[0]].send(strOut)
+            elif temp[0] == "unsub" or temp[0] == "unsubsribe":
+                if addserv[0] not in brokerList:
+                    raise Exception('You need to subscribe before unsubsribe')
+                else:
+                    threadGroup[addserv[0]].send(strOut)
             else:
-                threadGroup[addserv[0]].send(strOut)
-        elif temp[0].lower() == "pub" or temp[0].lower() == "publish":
-            if addserv[0] not in brokerList:
-                startConnection(addserv, strOut)
-            else:
-                threadGroup[addserv[0]].send(strOut)
-        elif temp[0].lower() == "unsub" or temp[0].lower() == "unsubsribe":
-            if addserv[0] not in brokerList:
-                raise Exception('You need to subscribe before unsubsribe')
-            else:
-                threadGroup[addserv[0]].send(strOut)
+                raise Exception('Command not found')
+
+            print("<You>:", strOut)
+
         else:
-            raise Exception('Wrong input')
-        print("<You>:", strOut)
+            raise Exception('Wrong syntax')
+
     except (KeyboardInterrupt, SystemExit):
         print("<System>: Shutting down")
         sys.exit()
