@@ -99,7 +99,9 @@ func (db *safeDB) publish(topic string, value string) {
 	db.m.Lock()
 	defer db.m.Unlock()
 	for _, clientIP := range db.clientMap[topic] {
-		fmt.Fprintf(connlist[clientIP], topic+" "+value)
+		if _,has := connlist[clientIP]; has{
+			fmt.Fprintf(connlist[clientIP], topic+" "+value)
+		}
 	}
 }
 
@@ -154,7 +156,8 @@ func find(slice []string, item string) (int, bool) {
 }
 
 func (db *safeDB) deleteAllClient(cilentIP string) {
-	for key, _ := range db.clientMap {
+	delete(connlist,cilentIP)
+	for key := range db.clientMap {
 		db.deleteClient(cilentIP, key)
 	}
 
