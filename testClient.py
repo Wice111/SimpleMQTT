@@ -53,29 +53,24 @@ def stopConnection(ipServ):
 
 brokerList = list()
 threadGroup = dict()
-allCommand = ["sub","subsribe","pub","publish","unsub","unsubsribe"]
+allCommand = ["sub","subsribe","pub","publish","unsub","unsubsribe",'exit','quit']
 while True:
     try:
         temp = [v.strip() for  v in input().replace("'",' ').strip().split()] 
-        if len(temp) == 0:
-            pass
+        temp[0] = temp[0].lower()
+        if temp[0] not in allCommand: raise Exception("Command not found")
+        if temp[0] in ['exit','quit']: raise KeyboardInterrupt
+        if len(temp) < 2 : raise Exception("No ip or port")
 
-        elif len(temp) == 4:
-            temp[0] = temp[0].lower()
-            if temp[0] not in allCommand: raise Exception("Command not found")
-            
-            tempaddr = [ v.strip() for v in temp[1].split(':') ]
-            if len(tempaddr) != 2 and not tempaddr[1].isnumeric():  raise Exception('Wrong ip or port')
-         
-            addserv = (tempaddr[0],int(tempaddr[1]))  # {servip,servport}
-        
-            strOut = temp[0]+" "+" ".join(temp[2:])
+        tempaddr = [ v.strip() for v in temp[1].split(':') ]
+        if len(tempaddr) != 2 or not tempaddr[1].isnumeric():  raise Exception('Wrong ip or port')
+        addserv = (tempaddr[0],int(tempaddr[1]))  # {servip,servport}
+        strOut = temp[0]+" "+" ".join(temp[2:])
+
+        if len(temp) < 3 : raise Exception("No topic")
+
+        if len(temp) == 3:
             if temp[0] == "sub" or temp[0] == "subsribe":
-                if addserv[0] not in brokerList:
-                    startConnection(addserv, strOut)
-                else:
-                    threadGroup[addserv[0]].send(strOut)
-            elif temp[0] == "pub" or temp[0] == "publish":
                 if addserv[0] not in brokerList:
                     startConnection(addserv, strOut)
                 else:
@@ -85,9 +80,15 @@ while True:
                     raise Exception('You need to subscribe before unsubsribe')
                 else:
                     threadGroup[addserv[0]].send(strOut)
-            else:
-                raise Exception('Command not found')
+            print("<You>:", strOut)
 
+        elif len(temp) == 4:
+          
+            if temp[0] == "pub" or temp[0] == "publish":
+                if addserv[0] not in brokerList:
+                    startConnection(addserv, strOut)
+                else:
+                    threadGroup[addserv[0]].send(strOut)
             print("<You>:", strOut)
 
         else:
@@ -98,3 +99,4 @@ while True:
         sys.exit()
     except Exception as e:
         print("<System>:",e)
+
