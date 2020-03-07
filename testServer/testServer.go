@@ -24,9 +24,11 @@ func main() {
 	db = &safeDB{}
 	db.retainMap = make(map[string]string)
 	db.clientMap = make(map[string][]string)
-	go clientReciver()
-
 	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("<System>: Please input server port")
+	scanner.Scan()
+	strin := scanner.Text()
+	go clientReciver(strin)
 	for {
 		scanner.Scan()
 		strOut := scanner.Text()
@@ -36,9 +38,9 @@ func main() {
 	}
 }
 
-func clientReciver() {
-	ServPort := ":50000"
-	ln, _ := net.Listen("tcp", "127.0.0.1"+ServPort)
+func clientReciver(servport string) {
+	servport = ":" + servport
+	ln, _ := net.Listen("tcp", "127.0.0.1"+servport)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -78,7 +80,6 @@ func clientHandler(conn net.Conn) {
 				fmt.Print("<System>: ", conn.RemoteAddr().String(), " cant unsubsribe topic ", temp[1])
 				fmt.Fprintf(conn, "Cant unsubsribe")
 			}
-
 		}
 	}
 }
