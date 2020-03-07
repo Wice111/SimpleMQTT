@@ -85,6 +85,7 @@ func clientHandler(conn net.Conn) {
 			}
 		}
 	}
+	conn.Close()
 	db.deleteAllClient(conn.RemoteAddr().String())
 	fmt.Print("<System>: ", conn.RemoteAddr().String(), " has disconnected\n")
 }
