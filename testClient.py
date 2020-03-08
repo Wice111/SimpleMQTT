@@ -16,7 +16,7 @@ class ClientThread(threading.Thread):
                 if not byteIn :
                     print("<System>:",self.clientSocket.getpeername(),"doesn't send any data")
                     break
-                print("")
+                print("re")
                 command, topic, payload = unpack(byteIn)
                 print("<server>: command {}:{} topic: {} paylod: {}".format(command,reverseCommandDict[command],topic,payload))
                 print("<server>: ", byteIn.decode('utf-8'))
@@ -131,8 +131,6 @@ while True:
         elif temp[0] == 'unsubscribe' or temp[0] == 'unsub' : header = 'unsub'
         else: raise Exception('Wrong syntax')
 
-        print(headerPack(header,payload))
-        print(unpack(headerPack(header,payload)))
         if addserv[0] not in brokerList:
             startConnection(addserv, headerPack(header,payload))
         else:
