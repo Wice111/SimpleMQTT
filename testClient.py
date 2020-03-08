@@ -18,7 +18,6 @@ class ClientThread(threading.Thread):
                     break
                 command, topic, payload = unpack(byteIn)
                 print("<server>: command {}:{} || topic: {} || paylod: {}".format(command,reverseCommandDict[command],topic,payload))
-                print("<server>: ", byteIn.decode('utf-8'))
             except Exception as e:
                 print("<System>:",self.clientSocket.getpeername(),e)
                 break
@@ -61,7 +60,7 @@ def write2byte(data):
     return bytes([data // 256, data % 256])
 
 def Command(command_):
-    return bytes([CommandDict['pub']])
+    return bytes([CommandDict[command_]])
 
 def headerPack(cmd,payload):
     buffer = Command(cmd)
@@ -112,12 +111,7 @@ allCommand = ["sub","subscribe","pub","publish","unsub","unsubscribe",'exit','qu
 while True:
     try:
         temp = [v.strip() for  v in shlex.split(input())] 
-
-        print('pass')
-        print(len(temp))
         print(temp)
-
-
         temp[0] = temp[0].lower()
         if temp[0] not in allCommand: raise Exception("Command not found")
         if temp[0] in ['exit','quit']: raise KeyboardInterrupt
@@ -137,31 +131,15 @@ while True:
         else: raise Exception('Wrong syntax')
 
         print(headerPack(head,payload))
+        print(unpack(headerPack(head,payload)))
 
         if addserv[0] not in brokerList:
+            if head == 'unsub':
+                raise Exception('You need to subscribe before unsubscribe')
             startConnection(addserv, headerPack(head,payload))
         else:
             threadGroup[addserv[0]].send(headerPack(head,payload))
         
-        # elif temp[0] == "unsub" or temp[0] == "unsubscribe":
-        #     if addserv[0] not in brokerList:
-        #         raise Exception('You need to subscribe before unsubscribe')
-        #     else:
-        #         threadGroup[addserv[0]].send(strOut)
-
-
-        # elif len(temp) == 4:
-          
-        #     if temp[0] == "pub" or temp[0] == "publish":
-        #         if addserv[0] not in brokerList:
-        #             startConnection(addserv, strOut)
-        #         else:
-        #             threadGroup[addserv[0]].send(strOut)
-        #     else: raise Exception('Wrong syntax')
-
-        # else:
-        #     raise Exception('Wrong syntax')
-
     except (KeyboardInterrupt, SystemExit):
         print("<System>: Shutting down")
         sys.exit()
