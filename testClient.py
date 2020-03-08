@@ -20,9 +20,9 @@ class ClientThread(threading.Thread):
                 elif command == CommandDict['puback']:
                     print("<Broker>: Publish topic['{}'] complete".format(topic))
                 elif command == CommandDict['suback']:
-                    print("<Broker>: Subscript topic['{}'] complete".format(topic))
+                    print("<Broker>: Subscribe topic['{}'] complete".format(topic))
                 elif command == CommandDict['unsuback']:
-                    print("<Broker>: Unsubscript topic['{}']".format(topic))
+                    print("<Broker>: Subscribe topic['{}']".format(topic))
                 elif command == CommandDict['pub']:
                     print("<Broker>: topic['{}']: {}".format(topic,payload))
                 elif command == CommandDict['sub']:
