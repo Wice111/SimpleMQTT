@@ -45,7 +45,7 @@ class ClientThread(threading.Thread):
     def send(self, out):
         self.clientSocket.send(out)
     def stop(self):
-        stopConnection(self.clientSocket.getpeername()[0])
+        stopConnection(self.clientSocket.getpeername())
         self.clientSocket.shutdown(socket.SHUT_RDWR)
         self.clientSocket.close()
         print("<System>: Thread stop")
@@ -113,16 +113,16 @@ def startConnection(addserv, strOut):
         # time out for messages
         clientSocket.settimeout(None)
         print("<System>: Server connected: " + str(addserv[0])+':' + str(addserv[1]))
-        brokerList.append(addserv[0])
-        threadGroup[addserv[0]] = ClientThread(clientSocket)
-        threadGroup[addserv[0]].start()
-        threadGroup[addserv[0]].send(strOut)
+        brokerList.append(addserv)
+        threadGroup[addserv] = ClientThread(clientSocket)
+        threadGroup[addserv].start()
+        threadGroup[addserv].send(strOut)
     except Exception as e:
         print("<System>: Something's wrong with "+str(addserv)+". Exception is "+str(e))
 
-def stopConnection(ipServ):
-    brokerList.remove(ipServ)
-    threadGroup.pop(ipServ)
+def stopConnection(addserv):
+    brokerList.remove(addserv)
+    threadGroup.pop(addserv)
 
 brokerList = list()
 threadGroup = dict()
@@ -165,14 +165,14 @@ while True:
         if len(temp) < 4 : payload = pack(temp[2],"")
         else : payload = pack(temp[2],temp[3])
 
-        if addserv[0] not in brokerList:
+        if addserv not in brokerList:
             startConnection(addserv, headerPack(head,payload))
         else:
-            threadGroup[addserv[0]].send(headerPack(head,payload))
+            threadGroup[addserv].send(headerPack(head,payload))
         
     except (KeyboardInterrupt, SystemExit):
         print("<System>: Shutting down")
         sys.exit()
     except Exception as e:
-        print("<System>:",e)
+        print("<System ee >:",e)
 
