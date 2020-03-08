@@ -222,25 +222,28 @@ func (db *safeDB) deleteAllClient(cilentIP string) {
 
 }
 
-func sendData(conn net.Conn, cmd int, header []byte, payload []byte) {
-	strOut := make([]byte, 70000)
+func sendData(conn net.Conn, cmd byte, header []byte, payload []byte) {
+	var strOut []byte
 
-	cmdType := make([]byte, 8)
-	binary.LittleEndian.PutUint64(cmdType, uint64(cmd))
-	strOut = append(strOut, cmdType[7:]...)
+	strOut = append(strOut, cmd)
 
 	headerSize := make([]byte, 8)
-	binary.LittleEndian.PutUint64(headerSize, uint64(len(header)))
-	strOut = append(strOut, headerSize[7:]...)
+	binary.BigEndian.PutUint64(headerSize, uint64(len(header)))
+	strOut = append(strOut, headerSize[7])
+	//fmt.Printf("Header size : % x", headerSize)
+
+	strOut = append(strOut, header...)
+	//fmt.Printf("Header % x", strOut)
 
 	payloadSize := make([]byte, 8)
-	binary.LittleEndian.PutUint64(payloadSize, uint64(len(payload)))
+	binary.BigEndian.PutUint64(payloadSize, uint64(len(payload)))
 	strOut = append(strOut, payloadSize[6:]...)
+	//fmt.Printf("Payload size : % x", payloadSize)
 
 	if payload == nil {
-		conn.Write(strOut)
+		conn.Write(strOut[0:(4 + len(header))])
 	} else {
 		strOut = append(strOut, payload...)
-		conn.Write(strOut)
+		conn.Write(strOut[0:(4 + len(header) + len(payload))])
 	}
 }
