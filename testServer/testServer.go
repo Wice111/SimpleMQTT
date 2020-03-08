@@ -64,14 +64,14 @@ func clientHandler(conn net.Conn) {
 		}
 
 		//extract topic
-		topicLen := binary.BigEndian.Uint64(strIn[1:2])
+		topicLen := int(strIn[1])
 		topic := string(strIn[2:(2 + topicLen)])
 
 		//extract payload
-		var payloadLen uint64
+		var payloadLen int
 		var payload string
 		if strIn[0] == 2 {
-			payloadLen = binary.BigEndian.Uint64(strIn[(2 + topicLen):(4 + topicLen)])
+			payloadLen = (int(strIn[2+topicLen]) * 256) + int(strIn[3+topicLen])
 			payload = string(strIn[(4 + topicLen):(4 + topicLen + payloadLen)])
 		}
 
@@ -225,17 +225,17 @@ func (db *safeDB) deleteAllClient(cilentIP string) {
 func sendData(conn net.Conn, cmd int, header []byte, payload []byte) {
 	strOut := make([]byte, 70000)
 
-	cmdType := make([]byte, 1)
+	cmdType := make([]byte, 8)
 	binary.LittleEndian.PutUint64(cmdType, uint64(cmd))
-	strOut = append(strOut, cmdType...)
+	strOut = append(strOut, cmdType[7:]...)
 
-	headerSize := make([]byte, 1)
+	headerSize := make([]byte, 8)
 	binary.LittleEndian.PutUint64(headerSize, uint64(len(header)))
-	strOut = append(strOut, headerSize...)
+	strOut = append(strOut, headerSize[7:]...)
 
-	payloadSize := make([]byte, 2)
+	payloadSize := make([]byte, 8)
 	binary.LittleEndian.PutUint64(payloadSize, uint64(len(payload)))
-	strOut = append(strOut, payloadSize...)
+	strOut = append(strOut, payloadSize[6:]...)
 
 	if payload == nil {
 		conn.Write(strOut)
