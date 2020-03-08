@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
 	"sync"
 )
 
@@ -25,10 +26,18 @@ func main() {
 	db.retainMap = make(map[string]string)
 	db.clientMap = make(map[string][]string)
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("<System>: Please input server IP address and port > ")
-	scanner.Scan()
-	strin := scanner.Text()
-	go clientReciver(strin)
+	var strIn string
+	for {
+		fmt.Print("<System>: Please input server IP address and port > ")
+		scanner.Scan()
+		strIn = scanner.Text()
+
+		validAddr, _ := regexp.MatchString(`^[0-9]+(?:\.[0-9]+){3}:[0-9]+$`, strIn)
+		if validAddr {
+			break
+		}
+	}
+	go clientReceiver(strIn)
 	for {
 		scanner.Scan()
 		strOut := scanner.Text()
@@ -38,7 +47,7 @@ func main() {
 	}
 }
 
-func clientReciver(servAddr string) {
+func clientReceiver(servAddr string) {
 	ln, _ := net.Listen("tcp", servAddr)
 	fmt.Println("<System>: Now listening at ", servAddr)
 	for {
