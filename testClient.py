@@ -9,6 +9,9 @@ class ClientThread(threading.Thread):
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
         self.setDaemon(True)
+    
+    # run when socket is connected
+    # method for receive my mqtt protocal from tcp
     def run(self):
         while True:
             try:
@@ -33,10 +36,7 @@ class ClientThread(threading.Thread):
                     pass
                 else:
                     print("unKnown: {} {} {} ",command, topic, payload)
-
-                # if not byteIn :
-                #     print("<System>:",self.clientSocket.getpeername(),"doesn't send any data")
-                #     break     
+  
             except Exception as e:
                 print("<System Error>:",self.clientSocket.getpeername(),e)
                 break
@@ -44,14 +44,16 @@ class ClientThread(threading.Thread):
 
     def send(self, out):
         self.clientSocket.send(out)
+
+    # method for close socket
     def stop(self):
-        print("<System>: Thread stop at ip: {} port: {}".format(self.clientSocket.getpeername()[0],self.clientSocket.getpeername()[1])
-        )
+        print("<System>: Thread stop at ip: {} port: {}".format(self.clientSocket.getpeername()[0],self.clientSocket.getpeername()[1]))
         stopConnection(self.clientSocket.getpeername())
         self.clientSocket.shutdown(socket.SHUT_RDWR)
         self.clientSocket.close()
         self._stop_event.set()
 
+# map between byte(8 bit) and mqtt command
 CommandDict = {
     'pub'       : 2,
     'puback'    : 3,
@@ -76,17 +78,20 @@ reverseCommandDict = {
     11:'nack'
 }
 
+# return 2 byte of data ex data = 1024 -->  0x02 0x00
 def write2byte(data):
     return bytes([data // 256, data % 256])
 
 def Command(command_):
     return bytes([CommandDict[command_]])
 
+# pack headader and payload [header][payload]
 def headerPack(cmd,payload):
     buffer = Command(cmd)
     buffer += payload
     return buffer
 
+# pack topic and payload [topic size][topicname][payloadsize][payload]
 def pack(topicName="", payload=""):
     buffer = bytes([len(topicName)])
     buffer += bytes(topicName,'utf-8')
@@ -96,6 +101,7 @@ def pack(topicName="", payload=""):
     buffer += bytes(payload,'utf-8') 
     return buffer
 
+# uppack data (my mqtt protocol) to command , topic , payload 
 def unpack(data):
     command = int(data[0])
     Ntopic =  int(data[1])
@@ -103,7 +109,8 @@ def unpack(data):
     topicName = data[2:2+Ntopic].decode('utf8')
     payload = data[4+Ntopic:4+Ntopic+Npayload].decode('utf8')
     return command,topicName,payload
-        
+
+
 def startConnection(addserv, strOut):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -125,6 +132,7 @@ def stopConnection(addserv):
     brokerList.remove(addserv)
     threadGroup.pop(addserv)
 
+# list save socket connection
 brokerList = list()
 threadGroup = dict()
 HELP = ''' 
@@ -140,8 +148,11 @@ The commands are
     exit
     quit
     help                       '''
+
 print(HELP)
 print('Try to connect to server at 127.0.0.1:50000')
+
+# infinite loop can close when keyboard interrupt or exit command
 while True:
     try:
         temp = [v.strip() for  v in shlex.split(input())] 
