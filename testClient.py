@@ -12,13 +12,12 @@ class ClientThread(threading.Thread):
     def run(self):
         while True:
             try:
-                byteIn = self.clientSocket.recv(66000)
+                byteIn = self.clientSocket.recv(100)
                 if not byteIn :
                     print("<System>:",self.clientSocket.getpeername(),"doesn't send any data")
                     break
-                print("re")
                 command, topic, payload = unpack(byteIn)
-                print("<server>: command {}:{} topic: {} paylod: {}".format(command,reverseCommandDict[command],topic,payload))
+                print("<server>: command {}:{} || topic: {} || paylod: {}".format(command,reverseCommandDict[command],topic,payload))
                 print("<server>: ", byteIn.decode('utf-8'))
             except Exception as e:
                 print("<System>:",self.clientSocket.getpeername(),e)
@@ -42,6 +41,8 @@ CommandDict = {
     'unsub'     : 6,
     'unsuback'  : 7,
     'disconnect': 8,
+    'ack'       : 10,
+    'nack'      : 11
 }
 
 reverseCommandDict = {
@@ -51,7 +52,9 @@ reverseCommandDict = {
     5:'subscribe ack',   
     6:'unsubscribe',    
     7:'unsubscribe ack', 
-    8:'disconnect'
+    8:'disconnect',
+    10:'Ack',
+    11:'Nack'
 }
 
 def write2byte(data):
@@ -65,7 +68,7 @@ def headerPack(cmd,payload):
     buffer += payload
     return buffer
 
-def pack(topicName, payload):
+def pack(topicName="", payload=""):
     buffer = bytes([len(topicName)])
     buffer += bytes(topicName,'utf-8')
 
@@ -80,11 +83,6 @@ def unpack(data):
     Npayload = int(data[2+Ntopic])*256 + int(data[3+Ntopic])
     topicName = data[2:2+Ntopic].decode('utf8')
     payload = data[4+Ntopic:4+Ntopic+Npayload].decode('utf8')
-    print("start unpack")
-    print(command)
-    print(topicName)
-    print(payload)
-    print("end unpack")
     return command,topicName,payload
         
 def startConnection(addserv, strOut):
@@ -114,6 +112,12 @@ allCommand = ["sub","subscribe","pub","publish","unsub","unsubscribe",'exit','qu
 while True:
     try:
         temp = [v.strip() for  v in shlex.split(input())] 
+
+        print('pass')
+        print(len(temp))
+        print(temp)
+
+
         temp[0] = temp[0].lower()
         if temp[0] not in allCommand: raise Exception("Command not found")
         if temp[0] in ['exit','quit']: raise KeyboardInterrupt
@@ -122,19 +126,22 @@ while True:
         tempaddr = [ v.strip() for v in temp[1].split(':') ]
         if len(tempaddr) != 2 or not tempaddr[1].isnumeric():  raise Exception('Wrong ip or port')
         addserv = (tempaddr[0],int(tempaddr[1]))  # {servip,servport}
-        payload = pack(temp[2],temp[3])
 
         if len(temp) < 3 : raise Exception("No topic")
-  
-        if temp[0] == 'pub' or temp[0] == 'publish': header = 'pub'
-        elif temp[0] == 'sub' or temp[0] == 'subscribe' : header = 'sub'
-        elif temp[0] == 'unsubscribe' or temp[0] == 'unsub' : header = 'unsub'
+        if len(temp) < 4 : payload = pack(temp[2],"")
+        else : payload = pack(temp[2],temp[3])
+
+        if temp[0] == 'pub' or temp[0] == 'publish': head = 'pub'
+        elif temp[0] == 'sub' or temp[0] == 'subscribe' : head = 'sub'
+        elif temp[0] == 'unsubscribe' or temp[0] == 'unsub' : head = 'unsub'
         else: raise Exception('Wrong syntax')
 
+        print(headerPack(head,payload))
+
         if addserv[0] not in brokerList:
-            startConnection(addserv, headerPack(header,payload))
+            startConnection(addserv, headerPack(head,payload))
         else:
-            threadGroup[addserv[0]].send(headerPack(header,payload))
+            threadGroup[addserv[0]].send(headerPack(head,payload))
         
         # elif temp[0] == "unsub" or temp[0] == "unsubscribe":
         #     if addserv[0] not in brokerList:
