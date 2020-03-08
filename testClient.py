@@ -12,7 +12,7 @@ class ClientThread(threading.Thread):
     def run(self):
         while True:
             try:
-                byteIn = self.clientSocket.recv(100)
+                byteIn = self.clientSocket.recv(66000)
                 command, topic, payload = unpack(byteIn)
 
                 if command == CommandDict['nack'] :
