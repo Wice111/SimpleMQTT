@@ -13,13 +13,32 @@ class ClientThread(threading.Thread):
         while True:
             try:
                 byteIn = self.clientSocket.recv(100)
-                if not byteIn :
-                    print("<System>:",self.clientSocket.getpeername(),"doesn't send any data")
-                    break
                 command, topic, payload = unpack(byteIn)
-                print("<server>: command {}:{} || topic: {} || paylod: {}".format(command,reverseCommandDict[command],topic,payload))
+
+                if command == CommandDict['nack'] :
+                    print("<Broker>: [Error message] ",payload)
+                elif command == CommandDict['puback']:
+                    print("<Broker>: Publish topic['{}'] complete".format(topic))
+                elif command == CommandDict['suback']:
+                    print("<Broker>: Subscript topic['{}'] complete".format(topic))
+                elif command == CommandDict['unsuback']:
+                    print("<Broker>: Unsubscript topic['{}']".format(topic))
+                elif command == CommandDict['pub']:
+                    print("<Broker>: topic['{}']: {}".format(topic,payload))
+                elif command == CommandDict['sub']:
+                    pass
+                elif command == CommandDict['unsub']:
+                    pass
+                elif command == CommandDict['disconnect']:
+                    pass
+                else:
+                    print("unKnown: {} {} {} ",command, topic, payload)
+
+                # if not byteIn :
+                #     print("<System>:",self.clientSocket.getpeername(),"doesn't send any data")
+                #     break     
             except Exception as e:
-                print("<System>:",self.clientSocket.getpeername(),e)
+                print("<System Error>:",self.clientSocket.getpeername(),e)
                 break
         self.stop()
 
@@ -107,14 +126,35 @@ def stopConnection(ipServ):
 
 brokerList = list()
 threadGroup = dict()
-allCommand = ["sub","subscribe","pub","publish","unsub","unsubscribe",'exit','quit']
+HELP = ''' 
+Command :
+Usage: 
+    <command> [ip : port] [topic] [value]
+
+The commands are
+  <short>   <full command>
+    pub     publish
+    sub     subscribe
+    unsub   unsubscribe
+    exit
+    quit
+    help                       '''
+print(HELP)
+print('Try to connect to server at 127.0.0.1:50000')
 while True:
     try:
         temp = [v.strip() for  v in shlex.split(input())] 
-        print(temp)
+        if len(temp) < 1 : continue
         temp[0] = temp[0].lower()
-        if temp[0] not in allCommand: raise Exception("Command not found")
-        if temp[0] in ['exit','quit']: raise KeyboardInterrupt
+        if temp[0] in ['exit','quit']: raise KeyboardInterrupt 
+        elif temp[0] == 'help': 
+            print(HELP)
+            continue
+        elif temp[0] == 'pub' or temp[0] == 'publish': head = 'pub'
+        elif temp[0] == 'sub' or temp[0] == 'subscribe' : head = 'sub'
+        elif temp[0] == 'unsubscribe' or temp[0] == 'unsub' : head = 'unsub'
+        else: raise Exception("Command not found")
+
         if len(temp) < 2 : raise Exception("No ip or port")
 
         tempaddr = [ v.strip() for v in temp[1].split(':') ]
@@ -125,17 +165,7 @@ while True:
         if len(temp) < 4 : payload = pack(temp[2],"")
         else : payload = pack(temp[2],temp[3])
 
-        if temp[0] == 'pub' or temp[0] == 'publish': head = 'pub'
-        elif temp[0] == 'sub' or temp[0] == 'subscribe' : head = 'sub'
-        elif temp[0] == 'unsubscribe' or temp[0] == 'unsub' : head = 'unsub'
-        else: raise Exception('Wrong syntax')
-
-        print(headerPack(head,payload))
-        print(unpack(headerPack(head,payload)))
-
         if addserv[0] not in brokerList:
-            if head == 'unsub':
-                raise Exception('You need to subscribe before unsubscribe')
             startConnection(addserv, headerPack(head,payload))
         else:
             threadGroup[addserv[0]].send(headerPack(head,payload))
