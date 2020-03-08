@@ -25,7 +25,7 @@ func main() {
 	db.retainMap = make(map[string]string)
 	db.clientMap = make(map[string][]string)
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("<System>: Please input server port")
+	fmt.Print("<System>: Please input server IP address and port > ")
 	scanner.Scan()
 	strin := scanner.Text()
 	go clientReciver(strin)
@@ -38,16 +38,16 @@ func main() {
 	}
 }
 
-func clientReciver(servport string) {
-	servport = ":" + servport
-	ln, _ := net.Listen("tcp", "192.168.1.108"+servport)
+func clientReciver(servAddr string) {
+	ln, _ := net.Listen("tcp", servAddr)
+	fmt.Println("<System>: Now listening at ", servAddr)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Fatalln(err)
 			os.Exit(1)
 		}
-		fmt.Println("<System>:", conn.RemoteAddr().String(), "has connected")
+		fmt.Println("<System>: ", conn.RemoteAddr().String(), "has connected")
 		connlist[conn.RemoteAddr().String()] = conn
 		go clientHandler(conn)
 	}
@@ -68,41 +68,37 @@ func clientHandler(conn net.Conn) {
 		topic := string(strIn[2:(2 + topicLen)])
 
 		//extract payload
-		var payloadLen int
-		var payload string
-		if strIn[0] == 2 {
-			payloadLen = (int(strIn[2+topicLen]) * 256) + int(strIn[3+topicLen])
-			payload = string(strIn[(4 + topicLen):(4 + topicLen + payloadLen)])
-		}
+		payloadLen := (int(strIn[2+topicLen]) * 256) + int(strIn[3+topicLen])
+		payload := string(strIn[(4 + topicLen):(4 + topicLen + payloadLen)])
 
 		//processing
 		//publish = 2, subscribe = 4, unsubscribe = 6
 		if strIn[0] == 2 {
-			db.updateRetain(topic, payload)
-			db.publish(topic, payload)
-			fmt.Print("<PUB>: ", conn.RemoteAddr().String(), " just published '", payload, "' to topic ", topic)
-			//TODO: reply ok
-			sendData(conn, 10, strIn[2:(2+topicLen)], nil)
+			if payloadLen != 0 {
+				db.updateRetain(topic, payload)
+				db.publish(topic, payload)
+				fmt.Println("<PUB>: ", conn.RemoteAddr().String(), " just published '", payload, "' to topic ", topic)
+				sendData(conn, 3, strIn[2:(2+topicLen)], nil)
+			} else {
+				fmt.Println("<PUB>: ", conn.RemoteAddr().String(), " published without a payload to topic ", topic)
+				sendData(conn, 11, strIn[2:(2+topicLen)], []byte("Payload cannot be null."))
+			}
 		} else if strIn[0] == 4 {
 			if db.addClient(conn.RemoteAddr().String(), topic) {
+				fmt.Println("<SUB>: ", conn.RemoteAddr().String(), " just subscribed to topic ", topic)
+				sendData(conn, 5, strIn[2:(2+topicLen)], nil)
 				db.publishRetainValue(conn.RemoteAddr().String(), topic)
-				fmt.Print("<SUB>: ", conn.RemoteAddr().String(), " just subscribed to topic ", topic)
-				//TODO: reply ok
-				sendData(conn, 10, strIn[2:(2+topicLen)], nil)
 			} else {
-				fmt.Print("<SUB>: ", conn.RemoteAddr().String(), " tried to resubscribe to topic ", topic)
-				//TODO: reply not ok
-				sendData(conn, 11, strIn[2:(2+topicLen)], nil)
+				fmt.Println("<SUB>: ", conn.RemoteAddr().String(), " tried to resubscribe to topic ", topic)
+				sendData(conn, 11, strIn[2:(2+topicLen)], []byte("You're already subscribed to this topic."))
 			}
 		} else if strIn[0] == 6 {
 			if db.deleteClient(conn.RemoteAddr().String(), topic) {
-				fmt.Print("<UNSUB>: ", conn.RemoteAddr().String(), " just unsubscribed from topic ", topic)
-				//TODO: reply ok
-				sendData(conn, 10, strIn[2:(2+topicLen)], nil)
+				fmt.Println("<UNSUB>: ", conn.RemoteAddr().String(), " just unsubscribed from topic ", topic)
+				sendData(conn, 7, strIn[2:(2+topicLen)], nil)
 			} else {
-				fmt.Print("<UNSUB>: ", conn.RemoteAddr().String(), " tried to unsubscribed from topic ", topic, " without subscription")
-				//TODO: reply not ok
-				sendData(conn, 11, strIn[2:(2+topicLen)], nil)
+				fmt.Println("<UNSUB>: ", conn.RemoteAddr().String(), " tried to unsubscribed from topic ", topic, " without subscription")
+				sendData(conn, 11, strIn[2:(2+topicLen)], []byte("You have to subscribe to this topic first."))
 			}
 		} else {
 
@@ -154,8 +150,7 @@ func (db *safeDB) publish(topic string, value string) {
 	defer db.m.Unlock()
 	for _, clientIP := range db.clientMap[topic] {
 		if _, has := connlist[clientIP]; has {
-			//TODO: Change this to new format
-			sendData(connlist[clientIP], 5, []byte(topic), []byte(value))
+			sendData(connlist[clientIP], 2, []byte(topic), []byte(value))
 			//fmt.Fprintf(connlist[clientIP], topic+" "+value)
 		}
 	}
@@ -187,9 +182,8 @@ func (db *safeDB) publishRetainValue(clientIP string, topic string) {
 	db.m.Lock()
 	defer db.m.Unlock()
 	if val, has := db.retainMap[topic]; has {
-		fmt.Println(val)
-		//TODO: Change this to new format
-		sendData(connlist[clientIP], 5, []byte(topic), []byte(val))
+		sendData(connlist[clientIP], 2, []byte(topic), []byte(val))
+		fmt.Println("<PUB>: Sending retain value of topic ", topic, " to new subscriber.")
 		//fmt.Fprintf(connlist[clientIP], topic+" "+val)
 	}
 
