@@ -81,7 +81,10 @@ func clientHandler(conn net.Conn) {
 		payload := string(strIn[(4 + topicLen):(4 + topicLen + payloadLen)])
 
 		//processing
-		//publish = 2, subscribe = 4, unsubscribe = 6
+		//publish = 2, puback = 3
+		//subscribe = 4, suback = 5
+		//unsubscribe = 6, unsuback = 7
+		//ack = 10, nack = 11
 		if strIn[0] == 2 {
 			if payloadLen != 0 {
 				db.updateRetain(topic, payload)
@@ -110,38 +113,8 @@ func clientHandler(conn net.Conn) {
 				sendData(conn, 11, strIn[2:(2+topicLen)], []byte("You have to subscribe to this topic first."))
 			}
 		} else {
-
+			sendData(conn, 11, strIn[2:(2+topicLen)], []byte("Unknown command."))
 		}
-
-		// strIn, _ := bufio.NewReader(conn).ReadString('\n')
-		// if strIn == "" {
-		// 	break
-		// }
-		// temp := strings.Split(strIn, " ")
-		// if strings.ToLower(temp[0]) == "sub" || strings.ToLower(temp[0]) == "subscribe" {
-		// 	if db.addClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
-		// 		db.publishRetainValue(conn.RemoteAddr().String(), strings.TrimSpace(temp[1]))
-		// 		fmt.Print("<System>: ", conn.RemoteAddr().String(), " has subscribed to ", temp[1])
-		// 		fmt.Fprintf(conn, "Subscribe confirmed")
-		// 	} else {
-		// 		fmt.Print("<System>: ", conn.RemoteAddr().String(), " has already been subscribed to ", temp[1])
-		// 		fmt.Fprintf(conn, "You has already been subscribeb to "+strings.TrimSpace(temp[1]))
-		// 	}
-
-		// } else if strings.ToLower(temp[0]) == "pub" || strings.ToLower(temp[0]) == "publish" {
-		// 	fmt.Print("<System>: ", conn.RemoteAddr().String(), " has published topic ", temp[1], " ", temp[2])
-		// 	db.updateRetain(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
-		// 	db.publish(strings.TrimSpace(temp[1]), strings.TrimSpace(temp[2]))
-		// 	fmt.Fprintf(conn, "Published confirmed")
-		// } else if strings.ToLower(temp[0]) == "unsub" || strings.ToLower(temp[0]) == "unsubsribe" {
-		// 	if db.deleteClient(conn.RemoteAddr().String(), strings.TrimSpace(temp[1])) {
-		// 		fmt.Print("<System>: ", conn.RemoteAddr().String(), " has unsubsribed topic ", temp[1])
-		// 		fmt.Fprintf(conn, "Unsubsribe confirmed")
-		// 	} else {
-		// 		fmt.Print("<System>: ", conn.RemoteAddr().String(), " cant unsubsribe topic ", temp[1])
-		// 		fmt.Fprintf(conn, "Cant unsubsribe")
-		// 	}
-		// }
 	}
 	conn.Close()
 	db.deleteAllClient(conn.RemoteAddr().String())
@@ -160,7 +133,6 @@ func (db *safeDB) publish(topic string, value string) {
 	for _, clientIP := range db.clientMap[topic] {
 		if _, has := connlist[clientIP]; has {
 			sendData(connlist[clientIP], 2, []byte(topic), []byte(value))
-			//fmt.Fprintf(connlist[clientIP], topic+" "+value)
 		}
 	}
 }
@@ -193,7 +165,6 @@ func (db *safeDB) publishRetainValue(clientIP string, topic string) {
 	if val, has := db.retainMap[topic]; has {
 		sendData(connlist[clientIP], 2, []byte(topic), []byte(val))
 		fmt.Println("<PUB>: Sending retain value of topic ", topic, " to new subscriber.")
-		//fmt.Fprintf(connlist[clientIP], topic+" "+val)
 	}
 
 }
@@ -233,15 +204,12 @@ func sendData(conn net.Conn, cmd byte, header []byte, payload []byte) {
 	headerSize := make([]byte, 8)
 	binary.BigEndian.PutUint64(headerSize, uint64(len(header)))
 	strOut = append(strOut, headerSize[7])
-	//fmt.Printf("Header size : % x", headerSize)
 
 	strOut = append(strOut, header...)
-	//fmt.Printf("Header % x", strOut)
 
 	payloadSize := make([]byte, 8)
 	binary.BigEndian.PutUint64(payloadSize, uint64(len(payload)))
 	strOut = append(strOut, payloadSize[6:]...)
-	//fmt.Printf("Payload size : % x", payloadSize)
 
 	if payload == nil {
 		conn.Write(strOut[0:(4 + len(header))])
