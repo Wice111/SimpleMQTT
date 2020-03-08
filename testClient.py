@@ -45,10 +45,11 @@ class ClientThread(threading.Thread):
     def send(self, out):
         self.clientSocket.send(out)
     def stop(self):
+        print("<System>: Thread stop at ip: {} port: {}".format(self.clientSocket.getpeername()[0],self.clientSocket.getpeername()[1])
+        )
         stopConnection(self.clientSocket.getpeername())
         self.clientSocket.shutdown(socket.SHUT_RDWR)
         self.clientSocket.close()
-        print("<System>: Thread stop")
         self._stop_event.set()
 
 CommandDict = {
@@ -71,8 +72,8 @@ reverseCommandDict = {
     6:'unsubscribe',    
     7:'unsubscribe ack', 
     8:'disconnect',
-    10:'Ack',
-    11:'Nack'
+    10:'ack',
+    11:'nack'
 }
 
 def write2byte(data):
